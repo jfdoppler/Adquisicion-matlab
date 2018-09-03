@@ -67,7 +67,7 @@ clc
 close all
 % Creo un listener al que va a llamar (y ejecutar) la funcion que le digo
 % cuando tenga datos disponibles
-lh = addlistener(s, 'DataAvailable', @adquisicion_v2018_aux_dev);
+lh = addlistener(s, 'DataAvailable', @adquisicion_v2018_aux);
 % La función está en un .m aparte. No puede ser modificada durante la 
 % medición
 

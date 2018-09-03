@@ -1,4 +1,4 @@
-function adquisicion_v2018_aux_dev(src, event)
+function adquisicion_v2018_aux(src, event)
     % IMPORTANTE %
     % Esta función NO puede ser modificada durante la medición
     % Defino variables que persisten entre llamados de la funcion 
@@ -19,7 +19,7 @@ function adquisicion_v2018_aux_dev(src, event)
     persistent triggerActivado
     persistent startTime
     % Creo carpetas
-    base_folder = 'C:\Users\LSD\Desktop\Juan 2018\';
+    base_folder = 'F:\Juan 2018\';
     log_filename = 'adq-log.txt';
     birdname = 'CeRo';
     do_playback = true; % Hacer protocolos de playback?
@@ -40,10 +40,11 @@ function adquisicion_v2018_aux_dev(src, event)
     dt_integral = 1;    % Tiempo de integracion para trigger
     dt_trigger = 1;     % Cada cuanto llama al listener
     samples_trigger = floor(src.Rate*dt_trigger);
-    random_save_every = 30*60;
-    random_save_probability = 0;
+    random_save_every = 10*60;
     if do_random_saves
         random_save_probability = dt_integral/random_save_every;
+    else
+        random_save_probability = 0;
     end
     % Settings de medicion
     t_medicion_dia = 60;    % Duracion de cada medicion diurna
@@ -52,8 +53,8 @@ function adquisicion_v2018_aux_dev(src, event)
     daytime = [6 20];     % hour range of daytime
     % Playback settings
     % Donde estan los wavs de playback
-    playback_folder = 'C:\Users\LSD\Desktop\Juan 2018\CeRo\Playbacks\31082018\';
-    playback_start_time = 21;
+    playback_folder = 'F:\Juan 2018\CeRo\Playbacks\02092018\';
+    playback_start_time = 23;
     playback_end_time = 5;
     inter_protocol_delay = 60*15;  % Tiempo entre protocolos de playback
     intra_protocol_delay = 5;  % Tiempo entre playbacks dentro del protocolo

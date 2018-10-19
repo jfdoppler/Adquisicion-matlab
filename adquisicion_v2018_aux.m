@@ -21,11 +21,11 @@ function adquisicion_v2018_aux(src, event)
     % Creo carpetas
     base_folder = 'F:\Juan 2018\';
     log_filename = 'adq-log.txt';
-    birdname = 'CeRo';
-    do_playback = true; % Hacer protocolos de playback?
+    birdname = 'BVNaBla';
+    do_playback = false; % Hacer protocolos de playback?
     do_random_saves = true; %
     % Grabar solo sonido o los otros canales tambien?
-    solo_sonido = false;
+    solo_sonido = true;
     bird_folder = [base_folder, birdname, '\'];
     if isempty(dir(bird_folder))
         mkdir(bird_folder);
@@ -47,7 +47,7 @@ function adquisicion_v2018_aux(src, event)
         random_save_probability = 0;
     end
     % Settings de medicion
-    t_medicion_dia = 60;    % Duracion de cada medicion diurna
+    t_medicion_dia = 20;    % Duracion de cada medicion diurna
     t_medicion_noche = 20;  % Duracion de cada medicion nocturna
     t_total = 60*60*24*3;       % Tiempo total de medicion
     daytime = [6 20];     % hour range of daytime
@@ -82,12 +82,12 @@ function adquisicion_v2018_aux(src, event)
     % Determino que canal uso para triggerear
     if isDay || solo_sonido
         trigger_channel = sound_channel;
-        value_threshold = 0.05;
-        integral_threshold = 80;
+        value_threshold = 0.5;
+        integral_threshold = 550;
     else
         trigger_channel = vs_channel;
-        value_threshold = 0.12;
-        integral_threshold = 100;
+        value_threshold = 0.0;
+        integral_threshold = 0;
     end
     % Me fijo si es momento de hacer playbacks
     isPlaybackTime = 0;

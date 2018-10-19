@@ -31,7 +31,7 @@ disp('Listo')
 clc
 close all
 s.IsContinuous = false;
-s.DurationInSeconds = 2;
+s.DurationInSeconds = 3;
 % Que canal voy a mirar para usar luego como trigger
 dt_integral = 1;    % Tiempo de integracion
 samples_integral = floor(s.Rate*dt_integral);
@@ -61,7 +61,7 @@ set(gca,'YDir','normal');
 set(h,'YLim',[0 8]);
 subplot(6,1,6)
 plot(time, movsum(abs(vs), samples_integral))
-
+set(gcf,'Position',[100 50 1000 600])
 %% Medicion
 clc
 close all

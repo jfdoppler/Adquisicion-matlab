@@ -29,7 +29,7 @@ disp('Listo')
 %% Medicion a una frecuencia
 clc
 close all
-freq = 10;
+freq = 100;
 amplitud = 1;
 n_periodos = 10;
 duracion = n_periodos/freq;
@@ -60,6 +60,7 @@ signal_amp = zeros(1, length(frecuencias));
 signal_amp_error = zeros(1, length(frecuencias));
 output_amp = zeros(1, length(frecuencias));
 output_amp_error = zeros(1, length(frecuencias));
+time_delay = zeros(1, length(frecuencias));
 for i=1:numel(frecuencias)
     freq = frecuencias(i);
     n_periodos = 10;
@@ -79,18 +80,26 @@ for i=1:numel(frecuencias)
         max(output_signal)/10, 'MinPeakDistance', length(output_signal)/(2*n_periodos));
     output_amp(i) = mean(output_signal_peaks);
     output_amp_error(i) = std(output_signal_peaks);
+    time_delay(i) = finddelay(output_signal, signal, floor(s.Rate/(2*freq)))/s.Rate;
 end
 %% Grafico
-subplot(3,1,1)
+subplot(4,1,1)
 errorbar(frecuencias, signal_amp, signal_amp_error)
 ylabel('Amplitud amplificada')
-subplot(3,1,2)
+subplot(4,1,2)
 errorbar(frecuencias, output_amp, output_amp_error)
 ylabel('Amplitud entrada')
-subplot(3,1,3)
+subplot(4,1,3)
 gain = output_amp./signal_amp;
 gain_error = sqrt(gain.*(output_amp_error.^2./output_amp+signal_amp_error.^2./signal_amp));
 errorbar(frecuencias, gain, gain_error)
 xlabel('Frecuencia (Hz)')
 ylabel('Ganancia')
+subplot(4,1,4)
+plot(frecuencias, time_delay)
+ylabel('Time delay (s)')
+amp_phase = time_delay*2*pi.*frecuencias;
+yyaxis right
+plot(frecuencias, amp_phase)
+ylabel('Fase (rad)')
 set(gcf,'Position',[100 50 1000 600])

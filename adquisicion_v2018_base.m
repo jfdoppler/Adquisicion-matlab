@@ -31,7 +31,7 @@ disp('Listo')
 clc
 close all
 s.IsContinuous = false;
-s.DurationInSeconds = 3;
+s.DurationInSeconds = 5;
 % Que canal voy a mirar para usar luego como trigger
 dt_integral = 1;    % Tiempo de integracion
 samples_integral = floor(s.Rate*dt_integral);

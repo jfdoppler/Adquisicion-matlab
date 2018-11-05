@@ -1,4 +1,4 @@
-function adquisicion_v2018_aux_todas(src, event)
+function adquisicion_v2018_aux_v2(src, event)
     % IMPORTANTE %
     % Esta función NO puede ser modificada durante la medición
     % Defino variables que persisten entre llamados de la funcion 
@@ -22,7 +22,7 @@ function adquisicion_v2018_aux_todas(src, event)
     % Creo carpetas
     base_folder = 'F:\Juan 2018\';
     log_filename = 'adq-log.txt';
-    birdname = 'NaVe';
+    birdname = 'BVNaNa-BVRoVer';
     
     % Hacer protocolos de playback?
     do_playback = false;
@@ -30,6 +30,7 @@ function adquisicion_v2018_aux_todas(src, event)
     
     % Grabar solo sonido o los otros canales tambien?
     solo_sonido = false;
+    nighttime_trigger_signal = 'sound';
     random_save_every = 10*60;
     
     bird_folder = [base_folder, birdname, '\'];
@@ -37,16 +38,12 @@ function adquisicion_v2018_aux_todas(src, event)
         mkdir(bird_folder);
     end
     
-    % De los canales conectados cual es cada uno. Cuidado, importa el orden
-    % P. ej si se agregaron los canales 0, 2, 1 (en ese orden)
-    % x_channel = 1 == x esta conectada a la entrada 0 (ai0)
-    % y_channel = 3 == y esta conectada a la entrada 1 (ai1)
-    sound_channel = 1; 
-    vs_channel = 2;
-    pr_channel = 3;
-    hall_channel = 4;
-    ecg_channel = 5;
-    
+    num_canales = length(src.Channels);
+    channel_names = cell(num_canales, 1);
+    for ncanal=1:num_canales
+        channel_name = src.Channels(ncanal).Name;
+        channel_names{ncanal} = channel_name;
+    end
     % Trigger settings
     dt_integral = 1;    % Tiempo de integracion para trigger
     dt_trigger = 1;     % Cada cuanto llama al listener
@@ -59,14 +56,14 @@ function adquisicion_v2018_aux_todas(src, event)
     end
     
     % Settings de medicion
-    t_medicion_dia = 40;    % Duracion de cada medicion diurna
-    t_medicion_noche = 40;  % Duracion de cada medicion nocturna
+    t_medicion_dia = 15;    % Duracion de cada medicion diurna
+    t_medicion_noche = 15;  % Duracion de cada medicion nocturna
     t_total = 60*60*24*3;       % Tiempo total de medicion
-    daytime = [6 21];     % hour range of daytime
+    daytime = [6 20];     % hour range of daytime
    
     % Playback settings
     % Donde estan los wavs de playback
-    playback_folder = 'F:\Juan 2018\CeRo\Playbacks\02092018\';
+    playback_folder = 'F:\Juan 2018\NaVe\Playbacks\';
     playback_start_time = 23;
     playback_end_time = 5;
     inter_protocol_delay = 60*15;  % Tiempo entre protocolos de playback
@@ -96,13 +93,15 @@ function adquisicion_v2018_aux_todas(src, event)
     % Determino que canal uso para triggerear
     % Pensar con mas canales
     if isDay || solo_sonido
-        trigger_channel = sound_channel;
-        value_threshold = 0.0;
-        integral_threshold = 0;
+        trigger_type = 'sound';
+        trigger_channel = find(ismember(channel_names, trigger_type));
+        value_threshold = 0.4;
+        integral_threshold = 500;
     else
-        trigger_channel = vs_channel;
-        value_threshold = 0.0;
-        integral_threshold = 0;
+        trigger_type = nighttime_trigger_signal;
+        trigger_channel = find(ismember(channel_names, trigger_type));
+        value_threshold = 0.4;
+        integral_threshold = 500;
     end
     % Me fijo si es momento de hacer playbacks
     isPlaybackTime = 0;
@@ -129,7 +128,13 @@ function adquisicion_v2018_aux_todas(src, event)
     if (~exist(date_folder,'dir'))    % Creando carpeta y log del dia
         mkdir(date_folder);
         log = fopen([date_folder '\' log_filename],'wt');
-        fprintf(log,'s_fname\tvS_fname\tpr_fname\thall_fname\tecg_fname\tdate\ttime\ts_max\ts_min\tvS_max\tvS_min\tpr_max\tpr_min\thall_max\thall_min\tecg_max\tecg_min\ttrigger\tintegral\tplayback_fname\n'); % header
+        fprintf(log, 'date\ttime\t');
+        for ncanal=1:num_canales
+            fprintf(log, '%s_fname\t', channel_names{ncanal});
+            fprintf(log, '%s_max\t', channel_names{ncanal});
+            fprintf(log, '%s_min\t', channel_names{ncanal});
+        end
+        fprintf(log, 'trigger\tintegral\tplayback_fname\n');
         fclose(log);
     end
     % Nuevos datos que se agregan al llamar al listener
@@ -144,12 +149,15 @@ function adquisicion_v2018_aux_todas(src, event)
     % Al principio espero hasta juntar los datos de una medicion al menos
     if src.ScansAcquired < samples_buffer
         if max(time) <= dt_integral
+            src
             if solo_sonido
                 fprintf('Grabando SOLO SONIDO\n')
                 fprintf('Se grabarán mediciones de %is\n', t_medicion_dia)
             else
-                fprintf('Grabando SONIDO y MUSCULO\n')
-                fprintf('Se grabarán mediciones de:\nDía: %is\tNoche: %is\tPlayback: %is\n', ...
+                fprintf('Grabando:\n')
+                fprintf('%s - ', channel_names{:})
+                fprintf('\nTrigger nocturno: %s', nighttime_trigger_signal)
+                fprintf('\nSe grabarán mediciones de:\nDía: %is\tNoche: %is\tPlayback: %is\n', ...
                     t_medicion_dia, t_medicion_noche, playback_silence_delay+playback_record_time)
                 if ~do_playback
                     fprintf('No se reproducirán playbacks\n')
@@ -201,49 +209,55 @@ function adquisicion_v2018_aux_todas(src, event)
     else % Hago cosas
         if isPlaybackRunning    % Si esta pasando un playback
             if end_time-startTime > playback_record_time   % si medi el tiempo suficiente
-                % Normalizo para guardar wav
-                pb_data = data(end-(samples_playback+pre_samples_playback)+1:end,:);
-                pb_time = time(end-(samples_playback+pre_samples_playback)+1:end);
-                max_s = max(pb_data(:,1));
-                min_s = min(pb_data(:,1));
-                max_vs = max(pb_data(:,2));
-                min_vs = min(pb_data(:,2));
-                norm_data = bsxfun(@minus,pb_data,mean(pb_data));
-                norm_data = bsxfun(@rdivide,norm_data,max(abs(norm_data)));
-                % Grafico
-                subplot(3,1,1)
-                plot(pb_time, pb_data(:,1))
-                xlim([min(pb_time) max(pb_time)])
-                h = subplot(3,1,2);
-                [~,F,T,P]=spectrogram(pb_data(:,1),gausswin(round((15E-3)*src.Rate),2),...
-                    round(0.97*(10E-3)*src.Rate),2^nextpow2((10E-3)*src.Rate),...
-                    src.Rate,'yaxis');
-                imagesc(T,F/1000,10*log10(P/20));
-                set(gca,'YDir','normal');
-                set(h,'YLim',[0 8]);
-                subplot(3,1,3)
-                plot(pb_time, pb_data(:,2))
-                % Obtengo tiempo inicial medicion para nombrar archivo
-                ref_time = addtodate(datenum(clock), -playback_record_time, 'second');
+		ref_time = addtodate(datenum(clock), -playback_record_time, 'second');
                 fecha = datestr(ref_time,'yyyy_mm_dd');
                 hora = datestr(ref_time,'HH.MM.SS');
                 str_rectime = datestr(ref_time,'yyyy_mm_dd-HH.MM.SS');
-                name_s = ['s', '_', birdname, '_', str_rectime, '_', playbackName, '.wav'];
-                filename_s = [date_folder '\' name_s];
-                audiowrite(filename_s, norm_data(:,sound_channel), floor(src.Rate));
-                name_vs = ['vs', '_', birdname, '_', str_rectime, '_', playbackName, '.wav'];
-                filename_vs = [date_folder '\' name_vs];
-                audiowrite(filename_vs, norm_data(:,vs_channel), floor(src.Rate));
-                % appending entry to log
-                trigger_type = 'playback';
+		% Normalizo para guardar wav
+		pb_data = data(end-(samples_playback+pre_samples_playback)+1:end,:);
+                pb_time = time(end-(samples_playback+pre_samples_playback)+1:end);
+                norm_data = bsxfun(@minus,data,mean(pb_data));
+                norm_data = bsxfun(@rdivide,norm_data,max(abs(norm_data)));
+		trigger_type = 'playback';
                 log = fopen([date_folder '\' log_filename],'at');
                 max_integral = 0;
-                fprintf(log,'%s\t%s\t%s\t%s\t%f\t%f\t%f\t%f\t%s\t%f\t%s\n', ...
-                    name_s,name_vs,fecha,hora,max_s,min_s,max_vs,min_vs,trigger_type,max_integral,playbackWav);
-                fclose(log);
+
                 fprintf('-- Datos --\n')
-                fprintf('Carpeta: %s\nHora: %s\nMax_s = %f\tMin_s = %f\nMax_vs = %f\tMin_vs = %f\nIntegral = %f\n', ...
-                    date_folder,hora,max_s,min_s,max_vs,min_vs,max_integral);
+                fprintf('Carpeta: %s\nHora: %s\nIntegral = %f\n', ...
+                    date_folder,hora,max_integral);
+                fprintf('Numero de grabacion: %i\n', ...
+                    recordNumber);
+                fprintf('Trigger: %s\nPlayback: %s\n-----------\n', ...
+                    trigger_type,playbackWav);
+                for ncanal=1:num_canales
+                    channel_name = src.Channels(ncanal).Name;
+                    channel_data = pb_data(:, ncanal);
+                    figure(1)
+                    subplot(num_canales, 1, ncanal)
+                    plot(pb_time, channel_data)
+                    title(channel_name);
+                    xlim([min(pb_time) max(pb_time)])
+                    figure(2)
+                    h = subplot(num_canales, 1, ncanal);
+                    [~,F,T,P]=spectrogram(channel_data,gausswin(round((15E-3)*src.Rate),2),...
+                        round(0.97*(10E-3)*src.Rate),2^nextpow2((10E-3)*src.Rate),...
+                        src.Rate,'yaxis');
+                    imagesc(T,F/1000,10*log10(P/20));
+                    set(gca,'YDir','normal');
+                    set(h,'YLim',[0 8]);
+                    title(channel_name);
+                    max_channel = max(channel_data);
+                    min_channel = min(channel_data);
+                    name = [channel_name, '_', birdname, '_', str_rectime, '_', playbackName, '.wav'];
+                    filename = [date_folder '\' name];
+                    audiowrite(filename, norm_data(:,ncanal), floor(src.Rate));
+                    % appending entry to log
+                    fprintf(log,'%s\t%f\t%f\t', name, max_channel, min_channel);
+                    fprintf('Max_%s = %f\tMin_%s = %f\n', channel_name, ...
+                        max_channel, channel_name, min_channel);
+                end
+                fprintf(log, '%f\t%s\t%s\n', max_integral, trigger_type, playbackWav);
+                fclose(log);
                 fprintf('Trigger: %s\nPlayback: %s\n-----------\n', ...
                     trigger_type,playbackWav);
                 isPlaybackRunning = false;
@@ -300,7 +314,7 @@ function adquisicion_v2018_aux_todas(src, event)
                 fprintf('Midiendo (%i segundos)...\n', t_medicion_dia)
                 triggerActivado = true;
             end
-            % Defino intervalo de interes para determinar si gurado
+            % Defino intervalo de interes para determinar si guardo
             left_lim = floor(src.Rate*1);   % 1 segundo de buffer previo
             right_lim = left_lim + samples_trigger;
             max_integral = max(abs_window_sum(end-samples_medicion_actual+left_lim:end-samples_medicion_actual+right_lim));
@@ -309,75 +323,23 @@ function adquisicion_v2018_aux_todas(src, event)
             trigger_condition = (any(trigger_data > value_threshold) ...
                     && max_integral > integral_threshold ...
                     && time(end)-lastRecordedEnd >= t_medicion_dia);
-%             fprintf('%i', trigger_condition)
-%             fprintf('%i', random_save)
             if trigger_condition || random_save
                 sv_data = data(end-samples_medicion_actual+1:end, :);
                 sv_time = time(end-samples_medicion_actual+1:end, :);
                 fprintf('Guardando\n')
                 triggerActivado = false;
                 recordNumber = recordNumber + 1;
-                subplot(4,1,1)
-                plot(sv_time, sv_data(:,1))
-                xlim([min(sv_time) max(sv_time)])
-                legend('Sonido');
-                h = subplot(4,1,2);
-                [~,F,T,P]=spectrogram(sv_data(:,1),gausswin(round((15E-3)*src.Rate),2),...
-                    round(0.97*(10E-3)*src.Rate),2^nextpow2((10E-3)*src.Rate),...
-                    src.Rate,'yaxis');
-                imagesc(T,F/1000,10*log10(P/20));
-                set(gca,'YDir','normal');
-                set(h,'YLim',[0 8]);
-                subplot(4,1,3)
-                plot(sv_time, sv_data(:,2))
-                legend('vS');
-                xlim([min(sv_time) max(sv_time)])
-                h2 = subplot(4,1,4);
-                [~,F,T,P]=spectrogram(sv_data(:,2),gausswin(round((15E-3)*src.Rate),2),...
-                    round(0.97*(10E-3)*src.Rate),2^nextpow2((10E-3)*src.Rate),...
-                    src.Rate,'yaxis');
-                imagesc(T,F/1000,10*log10(P/20));
-                set(gca,'YDir','normal');
-                set(h2,'YLim',[0 4]);
-                lastRecordedEnd = sv_time(end);
-                max_s = max(sv_data(:,sound_channel));
-                min_s = min(sv_data(:,sound_channel));
-                max_vs = max(sv_data(:,vs_channel));
-                min_vs = min(sv_data(:,vs_channel));
-                max_pr = max(sv_data(:,pr_channel));
-                min_pr = min(sv_data(:,pr_channel));
-                max_hall = max(sv_data(:,hall_channel));
-                min_hall = min(sv_data(:,hall_channel));
-                max_ecg = max(sv_data(:,ecg_channel));
-                min_ecg = min(sv_data(:,ecg_channel));
                 
-                % Normalizo para guardar wav
-                norm_data = bsxfun(@minus,data,mean(sv_data));
-                norm_data = bsxfun(@rdivide,norm_data,max(abs(norm_data)));
-
                 ref_time = addtodate(datenum(clock), -t_medicion_dia, 'second');
                 fecha = datestr(ref_time,'yyyy_mm_dd');
                 hora = datestr(ref_time,'HH.MM.SS');
                 str_rectime = datestr(ref_time,'yyyy_mm_dd-HH.MM.SS');
-                name_s = ['s', '_', birdname, '_', str_rectime, '.wav'];
-                filename_s = [date_folder '\' name_s];
-                audiowrite(filename_s, norm_data(:,sound_channel), floor(src.Rate));
-                name_vs = 'NA';
-                if ~solo_sonido
-                    name_vs = ['vs', '_', birdname, '_', str_rectime, '.wav'];
-                    filename_vs = [date_folder '\' name_vs];
-                    audiowrite(filename_vs, norm_data(:,vs_channel), floor(src.Rate));
-                    name_pr = ['presion', '_', birdname, '_', str_rectime, '.wav'];
-                    filename_pr = [date_folder '\' name_pr];
-                    audiowrite(filename_pr, norm_data(:,pr_channel), floor(src.Rate));
-                    name_hall = ['hall', '_', birdname, '_', str_rectime, '.wav'];
-                    filename_hall = [date_folder '\' name_hall];
-                    audiowrite(filename_hall, norm_data(:,hall_channel), floor(src.Rate));
-                    name_ecg = ['ecg', '_', birdname, '_', str_rectime, '.wav'];
-                    filename_ecg = [date_folder '\' name_ecg];
-                    audiowrite(filename_ecg, norm_data(:,ecg_channel), floor(src.Rate));
-                end
-                % appending entry to log
+                
+                % Normalizo para guardar wav
+                norm_data = bsxfun(@minus,data,mean(sv_data));
+                norm_data = bsxfun(@rdivide,norm_data,max(abs(norm_data)));
+                log = fopen([date_folder '\' log_filename],'at');
+                fprintf(log,'%s\t%s\t', fecha, hora);
                 playbackWav = 'NA';
                 if random_save
                     trigger_type = 'random';
@@ -387,17 +349,43 @@ function adquisicion_v2018_aux_todas(src, event)
                 else
                     trigger_type = 'vs';
                 end
-                log = fopen([date_folder '\' log_filename],'at');
-                fprintf(log,'%s\t%s\t%s\t%s\t%s\t%s\t%s\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%s\t%f\t%s\n', ...
-                    name_s,name_vs,name_pr,name_hall,name_ecg,fecha,hora,max_s,min_s,max_vs,min_vs,max_pr,min_pr,max_hall,min_hall,max_ecg,min_ecg,trigger_type,max_integral,playbackWav);
-                fclose(log);
                 fprintf('-- Datos --\n')
-                fprintf('Carpeta: %s\nHora: %s\nMax_s = %f\tMin_s = %f\nMax_vs = %f\tMin_vs = %f\nMax_pr = %f\tMin_pr = %f\nMax_hall = %f\tMin_hall = %f\nMax_ecg = %f\tMin_ecg = %f\nIntegral = %f\n', ...
-                    date_folder,hora,max_s,min_s,max_vs,min_vs,max_pr,min_pr,max_hall,min_hall,max_ecg,min_ecg,max_integral);
+                fprintf('Carpeta: %s\nHora: %s\nIntegral = %f\n', ...
+                    date_folder,hora,max_integral);
                 fprintf('Numero de grabacion: %i\n', ...
                     recordNumber);
                 fprintf('Trigger: %s\nPlayback: %s\n-----------\n', ...
                     trigger_type,playbackWav);
+                for ncanal=1:num_canales
+                    channel_name = src.Channels(ncanal).Name;
+                    channel_data = sv_data(:,ncanal);
+                    figure(1)
+                    subplot(num_canales, 1, ncanal)
+                    plot(sv_time, channel_data)
+                    title(channel_name);
+                    xlim([min(sv_time) max(sv_time)])
+                    figure(2)
+                    h = subplot(num_canales, 1, ncanal);
+                    [~,F,T,P]=spectrogram(channel_data,gausswin(round((15E-3)*src.Rate),2),...
+                        round(0.97*(10E-3)*src.Rate),2^nextpow2((10E-3)*src.Rate),...
+                        src.Rate,'yaxis');
+                    imagesc(T,F/1000,10*log10(P/20));
+                    set(gca,'YDir','normal');
+                    set(h,'YLim',[0 8]);
+                    title(channel_name);
+                    max_channel = max(channel_data);
+                    min_channel = min(channel_data);
+                    name = [channel_name, '_', birdname, '_', str_rectime, '.wav'];
+                    filename = [date_folder '\' name];
+                    audiowrite(filename, norm_data(:,ncanal), floor(src.Rate));
+                    % appending entry to log
+                    fprintf(log,'%s\t%f\t%f\t', name, max_channel, min_channel);
+                    fprintf('Max_%s = %f\tMin_%s = %f\n', channel_name, ...
+                        max_channel, channel_name, min_channel);
+                end
+                fprintf(log, '%f\t%s\t%s\n', max_integral, trigger_type, playbackWav);
+                fclose(log);
+                lastRecordedEnd = sv_time(end);
             end
         end
         previousData = data(end-samples_buffer+1:end,:);

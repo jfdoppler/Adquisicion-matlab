@@ -14,11 +14,11 @@ daqreset
 s = daq.createSession('ni');
 % Puertos fisicos donde estan conectados los inputs
 sound_aichannel = 0;
-vs_aichannel = 1;
+vs_aichannel = 8;
 % Cuantos canales puedo medir sin perder frecuencia de adquisicion?
-pressure_aichannel = 2;
+pressure_aichannel = 1;
 hall_aichannel = 3;
-ecg_aichannel = 4;
+ecg_aichannel = 9;
 % Agrego canales y seteo rate
 s_ch = addAnalogInputChannel(s, 'Dev1', sound_aichannel, 'Voltage');
 vs_ch = addAnalogInputChannel(s, 'Dev1', vs_aichannel, 'Voltage');

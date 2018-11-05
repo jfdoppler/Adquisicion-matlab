@@ -14,11 +14,13 @@ daqreset
 s = daq.createSession('ni');
 % Puertos fisicos donde estan conectados los inputs
 sound_aichannel = 0;
-vs_aichannel = 1;
+vs_aichannel = 3;
+pr_aichannel = 1;
 % Agrego canales y seteo rate
 s_ch = addAnalogInputChannel(s, 'Dev1', sound_aichannel, 'Voltage');
 vs_ch = addAnalogInputChannel(s, 'Dev1', vs_aichannel, 'Voltage');
-vs_ch.Range = [-1, 1];
+pr_ch = addAnalogInputChannel(s, 'Dev1', pr_aichannel, 'Voltage');
+% vs_ch.Range = [-1, 1];
 s.Rate = 44150;
 % De los canales conectados cual es cada uno. Cuidado, importa el orden
 % P. ej si se agregaron los canales 0, 2, 1 (en ese orden)
@@ -26,12 +28,12 @@ s.Rate = 44150;
 % y_channel = 3 == y esta conectada a la entrada 1 (ai1)
 sound_channel = 1; 
 vs_channel = 2;
+pr_channel = 3;
 disp('Listo')
 %% Setear trigger
 clc
-close all
 s.IsContinuous = false;
-s.DurationInSeconds = 5;
+s.DurationInSeconds = 3;
 % Que canal voy a mirar para usar luego como trigger
 dt_integral = 1;    % Tiempo de integracion
 samples_integral = floor(s.Rate*dt_integral);
@@ -39,6 +41,15 @@ samples_integral = floor(s.Rate*dt_integral);
 [data, time] = s.startForeground();
 sound = data(:,sound_channel);
 vs = data(:,vs_channel);
+presion = data(:, pr_channel);
+figure()
+subplot(3,1,1)
+plot(time, sound)
+subplot(3,1,2)
+plot(time, vs)
+subplot(3,1,3)
+plot(time, presion)
+%%
 subplot(6,1,1)
 plot(time, sound)
 h = subplot(6,1,2);

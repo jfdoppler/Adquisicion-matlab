@@ -22,16 +22,23 @@ function adquisicion_v2018_aux_v2(src, event)
     % Creo carpetas
     base_folder = 'F:\Juan 2018\';
     log_filename = 'adq-log.txt';
-    birdname = 'BVNaNa-BVRoVer';
+    birdname = 'BVNaNa';
     
     % Hacer protocolos de playback?
-    do_playback = false;
+    do_playback = true;
     do_random_saves = true;
     
     % Grabar solo sonido o los otros canales tambien?
     solo_sonido = false;
-    nighttime_trigger_signal = 'sound';
-    random_save_every = 10*60;
+    % Trigger settings
+    sound_threshold = 0.15;
+    sound_integral = 500;
+    
+    nighttime_trigger_signal = 'vs';
+    nighttime_threshold = 0.05;
+    nighttime_integral = 500;
+    
+    random_save_every = 5*60;
     
     bird_folder = [base_folder, birdname, '\'];
     if isempty(dir(bird_folder))
@@ -57,27 +64,27 @@ function adquisicion_v2018_aux_v2(src, event)
     
     % Settings de medicion
     t_medicion_dia = 15;    % Duracion de cada medicion diurna
-    t_medicion_noche = 15;  % Duracion de cada medicion nocturna
+    t_medicion_noche = 30;  % Duracion de cada medicion nocturna
     t_total = 60*60*24*3;       % Tiempo total de medicion
     daytime = [6 20];     % hour range of daytime
    
     % Playback settings
     % Donde estan los wavs de playback
-    playback_folder = 'F:\Juan 2018\NaVe\Playbacks\';
-    playback_start_time = 23;
+    playback_folder = 'F:\Juan 2018\BVNaNa\Playbacks\13112018\';
+    playback_start_time = 22;
     playback_end_time = 5;
-    inter_protocol_delay = 60*15;  % Tiempo entre protocolos de playback
+    inter_protocol_delay = 60*20;  % Tiempo entre protocolos de playback
     intra_protocol_delay = 5;  % Tiempo entre playbacks dentro del protocolo
     playback_files = dir([playback_folder '\*.wav']); %file list of playback wavs
     % Repeticiones de cada playback por protocolo
-    playback_repetition = 2;
+    playback_repetition = 1;
     % number of seconds of silence before each playback
     playback_silence_delay = 3;
     pre_samples_playback = floor(src.Rate*playback_silence_delay);
     % number of seconds to recall for each playback including the silence
     % delay: playback files should last less than 
     % playback_record_time - playback_silence_delay
-    playback_record_time = 15;
+    playback_record_time = 20;
     samples_playback = floor(src.Rate*playback_record_time);
     
     t_buffer = max([t_medicion_dia, t_medicion_noche, ...
@@ -95,13 +102,13 @@ function adquisicion_v2018_aux_v2(src, event)
     if isDay || solo_sonido
         trigger_type = 'sound';
         trigger_channel = find(ismember(channel_names, trigger_type));
-        value_threshold = 0.4;
-        integral_threshold = 500;
+        value_threshold = sound_threshold;
+        integral_threshold = sound_integral;
     else
         trigger_type = nighttime_trigger_signal;
         trigger_channel = find(ismember(channel_names, trigger_type));
-        value_threshold = 0.4;
-        integral_threshold = 500;
+        value_threshold = nighttime_threshold;
+        integral_threshold = nighttime_integral;
     end
     % Me fijo si es momento de hacer playbacks
     isPlaybackTime = 0;
@@ -150,13 +157,20 @@ function adquisicion_v2018_aux_v2(src, event)
     if src.ScansAcquired < samples_buffer
         if max(time) <= dt_integral
             src
+            fprintf('ID ave: %s\n', birdname)
             if solo_sonido
                 fprintf('Grabando SOLO SONIDO\n')
+                fprintf('Sound trigger\n Umbral: %f ||| Integral: %f\n', ...
+                    sound_threshold, sound_integral)
                 fprintf('Se grabarán mediciones de %is\n', t_medicion_dia)
             else
                 fprintf('Grabando:\n')
                 fprintf('%s - ', channel_names{:})
-                fprintf('\nTrigger nocturno: %s', nighttime_trigger_signal)
+                fprintf('\n---Sound trigger---\nUmbral: %f ||| Integral: %f\n', ...
+                    sound_threshold, sound_integral)
+                fprintf('\n---Trigger nocturno---\n%s', nighttime_trigger_signal)
+                fprintf('\n%s trigger\n Umbral: %f ||| Integral: %f\n', ...
+                    nighttime_trigger_signal, nighttime_threshold, nighttime_integral)
                 fprintf('\nSe grabarán mediciones de:\nDía: %is\tNoche: %is\tPlayback: %is\n', ...
                     t_medicion_dia, t_medicion_noche, playback_silence_delay+playback_record_time)
                 if ~do_playback
@@ -186,7 +200,6 @@ function adquisicion_v2018_aux_v2(src, event)
             else
                 fprintf('No se grabarán mediciones al azar\n')
             end
-
             fprintf('Buffering')
         else
             fprintf('.')
@@ -209,22 +222,23 @@ function adquisicion_v2018_aux_v2(src, event)
     else % Hago cosas
         if isPlaybackRunning    % Si esta pasando un playback
             if end_time-startTime > playback_record_time   % si medi el tiempo suficiente
-		ref_time = addtodate(datenum(clock), -playback_record_time, 'second');
+                ref_time = addtodate(datenum(clock), -playback_record_time, 'second');
                 fecha = datestr(ref_time,'yyyy_mm_dd');
                 hora = datestr(ref_time,'HH.MM.SS');
                 str_rectime = datestr(ref_time,'yyyy_mm_dd-HH.MM.SS');
-		% Normalizo para guardar wav
-		pb_data = data(end-(samples_playback+pre_samples_playback)+1:end,:);
+                % Normalizo para guardar wav
+                pb_data = data(end-(samples_playback+pre_samples_playback)+1:end,:);
                 pb_time = time(end-(samples_playback+pre_samples_playback)+1:end);
-                norm_data = bsxfun(@minus,data,mean(pb_data));
+                norm_data = bsxfun(@minus,pb_data,mean(pb_data));
                 norm_data = bsxfun(@rdivide,norm_data,max(abs(norm_data)));
-		trigger_type = 'playback';
+                trigger_type = 'playback';
                 log = fopen([date_folder '\' log_filename],'at');
+                fprintf(log,'%s\t%s\t', fecha, hora);
                 max_integral = 0;
 
                 fprintf('-- Datos --\n')
                 fprintf('Carpeta: %s\nHora: %s\nIntegral = %f\n', ...
-                    date_folder,hora,max_integral);
+                    fecha,hora,max_integral);
                 fprintf('Numero de grabacion: %i\n', ...
                     recordNumber);
                 fprintf('Trigger: %s\nPlayback: %s\n-----------\n', ...
@@ -336,7 +350,7 @@ function adquisicion_v2018_aux_v2(src, event)
                 str_rectime = datestr(ref_time,'yyyy_mm_dd-HH.MM.SS');
                 
                 % Normalizo para guardar wav
-                norm_data = bsxfun(@minus,data,mean(sv_data));
+                norm_data = bsxfun(@minus,sv_data,mean(sv_data));
                 norm_data = bsxfun(@rdivide,norm_data,max(abs(norm_data)));
                 log = fopen([date_folder '\' log_filename],'at');
                 fprintf(log,'%s\t%s\t', fecha, hora);

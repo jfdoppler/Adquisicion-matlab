@@ -15,8 +15,8 @@ s = daq.createSession('ni');
 % Puertos fisicos donde estan conectados los inputs
 sound_aichannel = 0;
 vs_aichannel = 2;
-medir_vs = false;
-pressure_aichannel = 1;
+medir_vs = true;
+pressure_aichannel = 2;
 medir_pr = false;
 hall_aichannel = 3;
 medir_hall = false;
@@ -27,7 +27,7 @@ medir_ecg = false;
 s_ch.Name = 'sound';
 if medir_vs
     [vs_ch, vs_channel] = addAnalogInputChannel(s, 'Dev1', vs_aichannel, 'Voltage');
-    vs_ch.Range = [-1, 1];
+%     vs_ch.Range = [-1, 1];
     vs_ch.Name = 'vs';
 end
 if medir_pr
@@ -48,7 +48,8 @@ disp('Listo')
 clc
 close all
 s.IsContinuous = false;
-s.DurationInSeconds = 10;
+s.DurationInSeconds = 3;
+save_test = true; % Agregar para guardar medicion de calibracion
 % Que canal voy a mirar para usar luego como trigger
 dt_integral = 1;    % Tiempo de integracion
 samples_integral = floor(s.Rate*dt_integral);

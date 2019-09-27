@@ -56,31 +56,55 @@ tiempo entre llamados (ahora es 1 segundo).
 
 En este archivo es IMPORTANTE configurar adecuadamente las siguientes
 variables (c/ ejemplo de formato):
+
 base_folder = 'C:\Users\LSD\Desktop\Juan 2018\';
 
 log_filename = 'adq-log.txt';
+
 birdname = 'CeRo';
+
 do_playback = true;
+
 do_random_saves = true;
+
 solo_sonido = false;
+
 sound_channel = 1;
+
 vs_channel = 2;
+
 dt_integral = 1;
+
 dt_trigger = 1;
+
 random_save_every = 30*60;
+
 t_medicion_dia = 60;
+
 t_medicion_noche = 20;
+
 t_total = 60*60*24*3;
+
 daytime = [6 20];
+
 playback_folder = 'C:\Users\LSD\Desktop\Juan 2018\CeRo\Playbacks\31082018\';
+
 playback_start_time = 21;
+
 playback_end_time = 5;
+
 inter_protocol_delay = 60*15;
+
 intra_protocol_delay = 5;
+
 playback_repetition = 2;
+
 playback_silence_delay = 3;
+
 playback_record_time = 15;
+
 value_threshold = 0.05;
+
 integral_threshold = 80
 
 Los nombres son en general claros. Las ultimas dos (trigger related) se

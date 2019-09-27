@@ -11,10 +11,10 @@ Implementa adquisicion en matlab usando session based interface para placas de a
 En primer lugar configura la placa: agrega los canales correspondientes,
 setea rangos de adquisicion y rate. Luego (segunda celda) corre una
 adquisicion corta para ayudar a setear los valores de triggereo. Grafica
-las dos se√ales adquiridas y las integrales de las mismas en ventanas de
+las dos se√Éales adquiridas y las integrales de las mismas en ventanas de
 1 segundo, ademas de los espectrogramas de cada uno.
 Elegido el canal que se va a usar para triggerear se puede usar este
-grafico para ver el rango de la se√al correspondiente en un intervalo
+grafico para ver el rango de la se√Éal correspondiente en un intervalo
 sin actividad y el valor de la integral tipico en el mismo. Estos
 valores NO se ingresan en este archivo, sino en el _aux.
 
@@ -22,7 +22,7 @@ Por ultimo (tercera celda) se corre una adquisicion en background
 (medicion) en forma continua (no bloquea la consola). En esta celda se
 debe configurar cada cuanto tiempo se llama al LISTENER. El listener es
 la funcion del archivo _aux en la que se realiza todo el
-analisis/guardado de las se√ales, el cual se debe configurar antes de
+analisis/guardado de las se√Éales, el cual se debe configurar antes de
 largar cada medicion. Alli se elegira que canales se adquieren, en que
 condiciones, si se hacen playbacks, donde se guardaran los archivos,
 etc.
@@ -57,6 +57,7 @@ tiempo entre llamados (ahora es 1 segundo).
 En este archivo es IMPORTANTE configurar adecuadamente las siguientes
 variables (c/ ejemplo de formato):
 base_folder = 'C:\Users\LSD\Desktop\Juan 2018\';
+
 log_filename = 'adq-log.txt';
 birdname = 'CeRo';
 do_playback = true;

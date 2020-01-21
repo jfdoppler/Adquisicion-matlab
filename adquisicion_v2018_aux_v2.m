@@ -22,23 +22,23 @@ function adquisicion_v2018_aux_v2(src, event)
     % Creo carpetas
     base_folder = 'F:\Juan 2018\';
     log_filename = 'adq-log.txt';
-    birdname = 'BVNaNa';
+    birdname = 'BVNeNe';
     
     % Hacer protocolos de playback?
-    do_playback = true;
+    do_playback = false;
     do_random_saves = true;
     
     % Grabar solo sonido o los otros canales tambien?
     solo_sonido = false;
     % Trigger settings
-    sound_threshold = 0.15;
-    sound_integral = 500;
+    sound_threshold = 0.05;
+    sound_integral = 300;
     
-    nighttime_trigger_signal = 'vs';
+    nighttime_trigger_signal = 'sound';
     nighttime_threshold = 0.05;
-    nighttime_integral = 500;
+    nighttime_integral = 300;
     
-    random_save_every = 5*60;
+    random_save_every = 30*60;
     
     bird_folder = [base_folder, birdname, '\'];
     if isempty(dir(bird_folder))
@@ -64,9 +64,9 @@ function adquisicion_v2018_aux_v2(src, event)
     
     % Settings de medicion
     t_medicion_dia = 15;    % Duracion de cada medicion diurna
-    t_medicion_noche = 30;  % Duracion de cada medicion nocturna
+    t_medicion_noche = 15;  % Duracion de cada medicion nocturna
     t_total = 60*60*24*3;       % Tiempo total de medicion
-    daytime = [6 20];     % hour range of daytime
+    daytime = [5 20];     % hour range of daytime
    
     % Playback settings
     % Donde estan los wavs de playback
@@ -336,7 +336,7 @@ function adquisicion_v2018_aux_v2(src, event)
             random_save = rand(1) < random_save_probability;
             trigger_condition = (any(trigger_data > value_threshold) ...
                     && max_integral > integral_threshold ...
-                    && time(end)-lastRecordedEnd >= t_medicion_dia);
+                    && time(end)-lastRecordedEnd >= t_medicion_actual);
             if trigger_condition || random_save
                 sv_data = data(end-samples_medicion_actual+1:end, :);
                 sv_time = time(end-samples_medicion_actual+1:end, :);
@@ -344,7 +344,7 @@ function adquisicion_v2018_aux_v2(src, event)
                 triggerActivado = false;
                 recordNumber = recordNumber + 1;
                 
-                ref_time = addtodate(datenum(clock), -t_medicion_dia, 'second');
+                ref_time = addtodate(datenum(clock), -t_medicion_actual, 'second');
                 fecha = datestr(ref_time,'yyyy_mm_dd');
                 hora = datestr(ref_time,'HH.MM.SS');
                 str_rectime = datestr(ref_time,'yyyy_mm_dd-HH.MM.SS');
